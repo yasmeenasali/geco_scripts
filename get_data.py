@@ -10,7 +10,6 @@ NOTE: Some of the functions in this script are broken
 import numpy as np
 import json
 import csv
-import ligo.skymap.moc
 from astropy.table import Table
 from astropy.io import fits
 import pandas as pd
@@ -149,13 +148,13 @@ def generate_full_bkg_O3A(O3A_file, bkg_file, PATH, RUN):
 #note: keys are diff for O3B
 def downselect_npz(results_file, parameter='FAR', farcut=False, ptercut1=False, ptercut2=False):
     data = np.load(results_file, allow_pickle=True)
-    superevent_id = data['Superevent'] 
+    superevent_id = data['Superevent_ID'] 
     pipeline = data['Pipeline'] 
     snr = data['SNR']
     far = data['FAR'] 
-    skyarea = data['Skyarea'] 
+    skyarea = data['Sky_Area'] 
     pter = data['p_Terrestrial'] 
-    dist = data['Distance'] 
+    dist = data['Mean_Distance'] 
     #odds_ratio = data['Odds_Ratio'] 
     #neutrinos = data['Neutrino_Count'] 
     #ifos = data['IFOs']

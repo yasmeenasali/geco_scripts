@@ -15,8 +15,79 @@ from astropy.table import Table
 from astropy.io import fits
 import pandas as pd
 
+#TODO figure out fancy array indexing
+def far_cutoff(far, data_names):
+    #1 per day
+    farcut=(1.1574 * 10 ** (-5))
+    idx_farcut = np.where([i < farcut for i in far])
+    for name in data_names:    
+        name = name[idx_farcut]
+
+def generate_full_run_file(O3A_file, O3B_file, farcut=False):
+    O3A_data = np.load(O3A_file, allow_pickle=True)
+    O3A_superevent_id = O3A_data[0]
+    O3A_ifos = O3A_data[1]
+    O3A_tag = O3A_data[2]
+    O3A_pipeline = O3A_data[3]
+    O3A_snr = O3A_data[4]
+    O3A_far = O3A_data[5]
+    O3A_skyarea = O3A_data[6]
+    O3A_pter = O3A_data[7]
+    O3A_dist = O3A_data[8]
+
+    O3B_data = np.load(O3B_file, allow_pickle=True)
+    O3B_superevent_id = O3B_data['Superevent'] 
+    O3B_pipeline = O3B_data['Pipeline'] 
+    O3B_snr = O3B_data['SNR']
+    O3B_far = O3B_data['FAR'] 
+    O3B_skyarea = O3B_data['Skyarea'] 
+    O3B_pter = O3B_data['p_Terrestrial'] 
+    O3B_dist = O3B_data['Distance'] 
+
+
+    if farcut == True:
+        #cut on FAR at 1/day
+        farcut=(1.1574 * 10 ** (-5))
+        O3A_idx_farcut = np.where([i < farcut for i in O3A_far])
+        O3A_far = O3A_far[O3A_idx_farcut]
+        O3A_snr = O3A_snr[O3A_idx_farcut]
+        O3A_pipeline = O3A_pipeline[O3A_idx_farcut]
+        O3A_superevent_id = O3A_superevent_id[O3A_idx_farcut]
+        O3A_skyarea = O3A_skyarea[O3A_idx_farcut]
+        O3A_pter = O3A_pter[O3A_idx_farcut]
+        O3A_dist = O3A_dist[O3A_idx_farcut]
+
+        O3B_idx_farcut = np.where([i < farcut for i in O3B_far])
+        O3B_far = O3B_far[O3B_idx_farcut]
+        O3B_snr = O3B_snr[O3B_idx_farcut]
+        O3B_pipeline = O3B_pipeline[O3B_idx_farcut]
+        O3B_superevent_id = O3B_superevent_id[O3B_idx_farcut]
+        O3B_skyarea = O3B_skyarea[O3B_idx_farcut]
+        O3B_pter = O3B_pter[O3B_idx_farcut]
+        O3B_dist = O3B_dist[O3B_idx_farcut]
+
+    far = np.concatenate([O3A_far, O3B_far])     
+    snr = np.concatenate([O3A_snr, O3B_snr])     
+    skyarea = np.concatenate([O3A_skyarea, O3B_skyarea])     
+    pter = np.concatenate([O3A_pter, O3B_pter])     
+    dist = np.concatenate([O3A_dist, O3B_dist])     
+    pipeline = np.concatenate([O3A_pipeline, O3B_pipeline])     
+    superevent_id = np.concatenate([O3A_superevent_id, O3B_superevent_id])     
+
+    kwargs = {
+            "Superevent_ID": superevent_id, 
+            "Pipeline": pipeline,
+            "SNR": snr, 
+            "FAR": far,
+            "Sky_Area": skyarea, 
+            "p_Terrestrial": pter, 
+            "Mean_Distance": dist, 
+        }
+    
+    np.savez(f'O3_full_run_data.npz', **kwargs)    
+
 #Note this function needs to be adapted to work for both .npy and .npz 
-def generate_full_bkg(O3A_file, bkg_file, PATH, RUN):
+def generate_full_bkg_O3A(O3A_file, bkg_file, PATH, RUN):
     '''
     Read in the full O3A data from 'O3A_cbc_events.npy' and cross match with a .npz format background results file.
     '''
@@ -79,14 +150,14 @@ def generate_full_bkg(O3A_file, bkg_file, PATH, RUN):
 def downselect_npz(results_file, parameter='FAR', farcut=False, ptercut1=False, ptercut2=False):
     data = np.load(results_file, allow_pickle=True)
     superevent_id = data['Superevent'] 
-    #odds_ratio = data['Odds_Ratio'] 
-    #neutrinos = data['Neutrino_Count'] 
     pipeline = data['Pipeline'] 
     snr = data['SNR']
     far = data['FAR'] 
     skyarea = data['Skyarea'] 
     pter = data['p_Terrestrial'] 
     dist = data['Distance'] 
+    #odds_ratio = data['Odds_Ratio'] 
+    #neutrinos = data['Neutrino_Count'] 
     #ifos = data['IFOs']
     #tag = data['Tag']
 
@@ -161,14 +232,14 @@ def downselect_npz(results_file, parameter='FAR', farcut=False, ptercut1=False, 
 def downselect_npz_pipeline(results_file, parameter='FAR', farcut=False, oddscut=False):
     data = np.load(results_file, allow_pickle=True)
     superevent_id = data['Superevent'] 
-    #odds_ratio = data['Odds_Ratio'] 
-    #neutrinos = data['Neutrino_Count'] 
     pipeline = data['Pipeline'] 
     snr = data['SNR']
     far = data['FAR'] 
     skyarea = data['Skyarea'] 
     pter = data['p_Terrestrial'] 
     dist = data['Distance'] 
+    #odds_ratio = data['Odds_Ratio'] 
+    #neutrinos = data['Neutrino_Count'] 
     #ifos = data['IFOs']
     #tag = data['Tag']
 
@@ -257,9 +328,14 @@ def downselect_npz_pipeline(results_file, parameter='FAR', farcut=False, oddscut
     return dat_gstlal, dat_pycbc, dat_spiir, dat_MBTAOnline
 
 if __name__ == "__main__": 
-    print('Generating O3A Subthreshold Background File')
-    PATH = '/home/yasmeen.asali/GWHEN/O3A_subthreshold/data'
-    RUN = 'Feb2020'
-    O3A_file = f'{PATH}/O3A_cbc_data.npy'
-    bkg_file = f'{PATH}/bkg_{RUN}/subthresh_significance_outputs.npz'
-    generate_full_bkg(O3A_file, bkg_file, PATH, RUN)
+    PATH_O3A = '/home/yasmeen.asali/GWHEN/O3A_subthreshold/data'
+    O3A_file = f'{PATH_O3A}/O3A_cbc_data.npy'
+
+    PATH_O3B = '/home/yasmeen.asali/GWHEN/O3B_subthreshold/data'
+    O3B_file = f'{PATH_O3B}/O3B_cbc_full_data.npz'
+
+    generate_full_run_file(O3A_file, O3B_file, farcut=False)
+    #print('Generating O3A Subthreshold Background File')
+    #RUN = 'Feb2020'
+    #bkg_file = f'{PATH_O3A}/bkg_{RUN}/subthresh_significance_outputs.npz'
+    #generate_full_bkg(O3A_file, bkg_file, PATH_O3A, RUN)

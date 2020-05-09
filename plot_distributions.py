@@ -39,7 +39,7 @@ def best_scale(parameter):
         x_scale = 'log'
         y_scale = 'log'
     elif parameter == 'p Terrestrial':
-        bins_dat = np.logspace(np.log10(10**-10),np.log10(0.1),50)
+        bins_dat = np.logspace(np.log10(10**-10),np.log10(1),50)
         x_scale = 'log'
         y_scale = 'log'
     elif parameter == 'Distance':
@@ -56,16 +56,15 @@ def best_scale(parameter):
 
     return bins_dat, x_scale, y_scale
 
-def plot_parameters(numpy_file, RUN, parameter = 'SNR'):
-    dat = get_data.downselect_npz(numpy_file, parameter = parameter)
-    dat_far = get_data.downselect_npz(numpy_file, parameter = parameter, farcut = True)
+def plot_O3A_v_O3B(O3A_file, O3B_file, parameter = 'SNR'):
+    dat_O3A, dat_O3B = get_data.downselect_O3A_O3B_files(O3A_file, O3B_file, parameter = parameter)
 
     bins_dat, x_scale, y_scale = best_scale(parameter) 
 
     dens = False
     plt.figure(1)
-    plt.hist(dat, bins=bins_dat, color='b', alpha=0.5, density=dens, label="{} Events".format(len(dat)))
-    plt.hist(dat_far, bins=bins_dat, color='r', alpha=0.5, density=dens, label="{} Events".format(len(dat_far)))
+    plt.hist(dat_O3A, bins=bins_dat, color='b', alpha=0.5, density=dens, label="O3A Events\n({})".format(len(dat_O3A)))
+    plt.hist(dat_O3B, bins=bins_dat, color='r', alpha=0.5, density=dens, label="O3B Events\n({})".format(len(dat_O3B)))
     plt.xlabel(parameter)
     plt.ylabel('Number of Events')
     plt.xscale(x_scale)
@@ -73,7 +72,51 @@ def plot_parameters(numpy_file, RUN, parameter = 'SNR'):
     plt.grid()
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f'/home/yasmeen.asali/public_html/GWHEN/{RUN}/{parameter}_with_far_cut.pdf')
+    plt.savefig(f'/home/yasmeen.asali/public_html/GWHEN/O3_subthreshold/O3A_vs_O3B_{parameter}.pdf')
+    plt.close(1)
+
+    
+    dat_far_O3A, dat_far_O3B = get_data.downselect_O3A_O3B_files(O3A_file, O3B_file, parameter = parameter, farcut=True)
+
+    plt.figure(2)
+    plt.hist(dat_far_O3A, bins=bins_dat, color='b', alpha=0.5, density=dens, label="O3A with FAR $<$ 1/day\n({})".format(len(dat_far_O3A)))
+    plt.hist(dat_far_O3B, bins=bins_dat, color='r', alpha=0.5, density=dens, label="O3B with FAR $<$ 1/day\n({})".format(len(dat_far_O3B)))
+    plt.xlabel(parameter)
+    plt.ylabel('Number of Events')
+    plt.xscale(x_scale)
+    plt.yscale(y_scale)
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f'/home/yasmeen.asali/public_html/GWHEN/O3_subthreshold/O3A_vs_O3B_{parameter}_with_far_cut.pdf')
+    plt.close(2)
+
+def plot_parameters(numpy_file, parameter = 'SNR', background=False):
+    if background == True:
+        dat = get_data.downselect_npz(numpy_file, parameter = parameter, background=True)
+        dat_far = get_data.downselect_npz(numpy_file, parameter = parameter, farcut = True, background=True)
+    else:
+        dat = get_data.downselect_npz(numpy_file, parameter = parameter)
+        dat_far = get_data.downselect_npz(numpy_file, parameter = parameter, farcut = True)
+
+    bins_dat, x_scale, y_scale = best_scale(parameter) 
+
+    dens = False
+    plt.figure(1)
+    plt.hist(dat, bins=bins_dat, color='b', alpha=0.5, density=dens, label="All Events\n({})".format(len(dat)))
+    plt.hist(dat_far, bins=bins_dat, color='r', alpha=0.5, density=dens, label="FAR $<$ 1/day\n({})".format(len(dat_far)))
+    plt.xlabel(parameter)
+    plt.ylabel('Number of Events')
+    plt.xscale(x_scale)
+    plt.yscale(y_scale)
+    plt.grid()
+    plt.legend()
+    if background == True:
+        plt.title('O3A Subthreshold Background Results')
+        plt.savefig(f'/home/yasmeen.asali/public_html/GWHEN/O3A_bkg_{RUN_BKG}/with_titles/{parameter}_with_far_cut_full_results.pdf')
+    else:
+        plt.title('O3 Subthreshold Results')
+        plt.savefig(f'/home/yasmeen.asali/public_html/GWHEN/O3_subthreshold/{parameter}_with_far_cut.pdf')
     plt.close(1)
 
  
@@ -185,19 +228,34 @@ def plot_pter_high_odds(RUN):
     
 
 if __name__ == "__main__":
-    PATH='/home/yasmeen.asali/GWHEN/O3B_subthreshold/data'
-    RUN = 'O3B_subthreshold'
-    #numpy_file = f'{PATH}/bkg_{RUN}/subthresh_full_results.npz' 
-    numpy_file = f'{PATH}/O3B_cbc_full_data.npz' 
+    PATH_BKG ='/home/yasmeen.asali/GWHEN/O3A_subthreshold/data'
+    RUN_BKG = 'Feb2020'
+    numpy_file_bkg = f'{PATH_BKG}/bkg_{RUN_BKG}/subthresh_full_results.npz' 
+
+    PATH ='/home/yasmeen.asali/GWHEN/analysis'
+    numpy_file = f'{PATH}/O3_full_run_data.npz' 
     
-    #plot_parameters(numpy_file, RUN, parameter = 'SNR')
-    #plot_parameters(numpy_file, RUN, parameter = 'Sky Area')
-    #plot_parameters(numpy_file, RUN, parameter = 'p Terrestrial')
-    #plot_parameters(numpy_file, RUN, parameter = 'Distance')
+    PATH_O3A = '/home/yasmeen.asali/GWHEN/O3A_subthreshold/data'
+    O3A_file = f'{PATH_O3A}/O3A_cbc_data.npy'
+    PATH_O3B = '/home/yasmeen.asali/GWHEN/O3B_subthreshold/data'
+    O3B_file = f'{PATH_O3B}/O3B_cbc_full_data.npz'    
+
+    #plot_O3A_v_O3B(O3A_file, O3B_file, parameter = 'SNR')
+    #plot_O3A_v_O3B(O3A_file, O3B_file, parameter = 'Sky Area')
+    #plot_O3A_v_O3B(O3A_file, O3B_file, parameter = 'p Terrestrial')
+    #plot_O3A_v_O3B(O3A_file, O3B_file, parameter = 'Distance')
+
+    plot_parameters(numpy_file, parameter = 'SNR')
+    plot_parameters(numpy_file, parameter = 'Sky Area')
+    plot_parameters(numpy_file, parameter = 'p Terrestrial')
+    plot_parameters(numpy_file, parameter = 'Distance')
+
+    #plot_parameters(numpy_file, parameter = 'Odds Ratio', background = True)
+    #plot_parameters(numpy_file, parameter = 'Neutrino Count', background = True)
 
     #pipeline_subplots(numpy_file, RUN, parameter = 'SNR')
     #pipeline_subplots(numpy_file, RUN, parameter = 'Sky Area')
-    pipeline_subplots(numpy_file, RUN, parameter = 'p Terrestrial')
+    #pipeline_subplots(numpy_file, RUN, parameter = 'p Terrestrial')
     #pipeline_subplots(numpy_file, RUN, parameter = 'Distance')
 
     #pipeline_subplots(numpy_file, RUN, parameter = 'Odds Ratio')

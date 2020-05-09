@@ -146,7 +146,7 @@ def generate_full_bkg_O3A(O3A_file, bkg_file, PATH, RUN):
     np.savez(f'{PATH}/bkg_{RUN}/subthresh_full_results.npz', **kwargs)    
 
 #note: keys are diff for O3B
-def downselect_npz(results_file, parameter='FAR', farcut=False, ptercut1=False, ptercut2=False):
+def downselect_npz(results_file, parameter='FAR', farcut=False, ptercut=False, background=False):
     data = np.load(results_file, allow_pickle=True)
     superevent_id = data['Superevent_ID'] 
     pipeline = data['Pipeline'] 
@@ -155,13 +155,15 @@ def downselect_npz(results_file, parameter='FAR', farcut=False, ptercut1=False, 
     skyarea = data['Sky_Area'] 
     pter = data['p_Terrestrial'] 
     dist = data['Mean_Distance'] 
-    #odds_ratio = data['Odds_Ratio'] 
-    #neutrinos = data['Neutrino_Count'] 
+    if background == True:
+        odds_ratio = data['Odds_Ratio'] 
+        neutrinos = data['Neutrino_Count'] 
+        #set lower bound on odds ratio at 10^-30
+        odds_ratio[odds_ratio<10**-30] = 10**-30
+
+    #likely unnecessary 
     #ifos = data['IFOs']
     #tag = data['Tag']
-
-    #set lower bound on odds ratio at 10^-30
-    #odds_ratio[odds_ratio<10**-30] = 10**-30
 
     if farcut == True:
         #cut on FAR at 1/day
@@ -174,12 +176,11 @@ def downselect_npz(results_file, parameter='FAR', farcut=False, ptercut1=False, 
         skyarea = skyarea[idx_farcut]
         pter = pter[idx_farcut]
         dist = dist[idx_farcut]
-        #odds_ratio = odds_ratio[idx_farcut]
-        #neutrinos = neutrinos[idx_farcut]
-        #ifos = ifos[idx_farcut]
-        #tag = tag[idx_farcut]
+        if background == True: 
+            odds_ratio = odds_ratio[idx_farcut]
+            neutrinos = neutrinos[idx_farcut]
     
-    if ptercut1 == True:
+    if ptercut == True:
         #cut on pter
         ptercut=(10 ** (-1))
         idx_ptercut = np.where([i < ptercut for i in pter])
@@ -190,41 +191,24 @@ def downselect_npz(results_file, parameter='FAR', farcut=False, ptercut1=False, 
         skyarea = skyarea[idx_ptercut]
         pter = pter[idx_ptercut]
         dist = dist[idx_ptercut]
-        #odds_ratio = odds_ratio[idx_ptercut]
-        #neutrinos = neutrinos[idx_ptercut]
-        #ifos = ifos[idx_ptercut]
-        #tag = tag[idx_ptercut]
-    
-    if ptercut2 == True:
-        #cut on pter
-        ptercut=(10 ** (-1))
-        idx_ptercut = np.where([i > ptercut for i in pter])
-        far = far[idx_ptercut]
-        snr = snr[idx_ptercut]
-        pipeline = pipeline[idx_ptercut]
-        superevent_id = superevent_id[idx_ptercut]
-        skyarea = skyarea[idx_ptercut]
-        pter = pter[idx_ptercut]
-        dist = dist[idx_ptercut]
-        #odds_ratio = odds_ratio[idx_ptercut]
-        #neutrinos = neutrinos[idx_ptercut]
-        #ifos = ifos[idx_ptercut]
-        #tag = tag[idx_ptercut]
+        if background == True: 
+            odds_ratio = odds_ratio[idx_ptercut]
+            neutrinos = neutrinos[idx_ptercut]
     
     if parameter == 'FAR':
         dat = far
     elif parameter == 'SNR':
         dat = snr
-    #elif parameter == 'Odds Ratio':
-    #    dat = odds_ratio
-    #elif parameter == 'Neutrino Count':
-    #    dat = neutrino_count
     elif parameter == 'Sky Area':
         dat = skyarea
     elif parameter == 'p Terrestrial':
         dat = pter
     elif parameter == 'Distance':
         dat = dist
+    elif parameter == 'Odds Ratio' and background == True:
+        dat = odds_ratio
+    elif parameter == 'Neutrino Count' and background == True:
+        dat = neutrino_count
 
     return dat
 
@@ -325,6 +309,67 @@ def downselect_npz_pipeline(results_file, parameter='FAR', farcut=False, oddscut
         dat_MBTAOnline = 0
 
     return dat_gstlal, dat_pycbc, dat_spiir, dat_MBTAOnline
+
+def downselect_O3A_O3B_files(O3A_file, O3B_file, parameter = 'SNR', farcut=False):
+    O3A_data = np.load(O3A_file, allow_pickle=True)
+    O3A_superevent_id = O3A_data[0]
+    O3A_ifos = O3A_data[1]
+    O3A_tag = O3A_data[2]
+    O3A_pipeline = O3A_data[3]
+    O3A_snr = O3A_data[4]
+    O3A_far = O3A_data[5]
+    O3A_skyarea = O3A_data[6]
+    O3A_pter = O3A_data[7]
+    O3A_dist = O3A_data[8]
+
+    O3B_data = np.load(O3B_file, allow_pickle=True)
+    O3B_superevent_id = O3B_data['Superevent'] 
+    O3B_pipeline = O3B_data['Pipeline'] 
+    O3B_snr = O3B_data['SNR']
+    O3B_far = O3B_data['FAR'] 
+    O3B_skyarea = O3B_data['Skyarea'] 
+    O3B_pter = O3B_data['p_Terrestrial'] 
+    O3B_dist = O3B_data['Distance'] 
+
+
+    if farcut == True:
+        #cut on FAR at 1/day
+        farcut=(1.1574 * 10 ** (-5))
+        O3A_idx_farcut = np.where([i < farcut for i in O3A_far])
+        O3A_far = O3A_far[O3A_idx_farcut]
+        O3A_snr = O3A_snr[O3A_idx_farcut]
+        O3A_pipeline = O3A_pipeline[O3A_idx_farcut]
+        O3A_superevent_id = O3A_superevent_id[O3A_idx_farcut]
+        O3A_skyarea = O3A_skyarea[O3A_idx_farcut]
+        O3A_pter = O3A_pter[O3A_idx_farcut]
+        O3A_dist = O3A_dist[O3A_idx_farcut]
+
+        O3B_idx_farcut = np.where([i < farcut for i in O3B_far])
+        O3B_far = O3B_far[O3B_idx_farcut]
+        O3B_snr = O3B_snr[O3B_idx_farcut]
+        O3B_pipeline = O3B_pipeline[O3B_idx_farcut]
+        O3B_superevent_id = O3B_superevent_id[O3B_idx_farcut]
+        O3B_skyarea = O3B_skyarea[O3B_idx_farcut]
+        O3B_pter = O3B_pter[O3B_idx_farcut]
+        O3B_dist = O3B_dist[O3B_idx_farcut]
+
+    if parameter == 'FAR':
+        dat_O3A = O3A_far
+        dat_O3B = O3B_far
+    elif parameter == 'SNR':
+        dat_O3A = O3A_snr
+        dat_O3B = O3B_snr
+    elif parameter == 'Sky Area':
+        dat_O3A = O3A_skyarea
+        dat_O3B = O3B_skyarea
+    elif parameter == 'p Terrestrial':
+        dat_O3A = O3A_pter
+        dat_O3B = O3B_pter
+    elif parameter == 'Distance':
+        dat_O3A = O3A_dist
+        dat_O3B = O3B_dist
+
+    return dat_O3A, dat_O3B
 
 if __name__ == "__main__": 
     PATH_O3A = '/home/yasmeen.asali/GWHEN/O3A_subthreshold/data'

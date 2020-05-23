@@ -10,7 +10,6 @@ NOTE: Some of the functions in this script are broken
 import numpy as np
 import json
 import csv
-import ligo.skymap.moc
 from astropy.table import Table
 from astropy.io import fits
 import pandas as pd
@@ -212,6 +211,42 @@ def downselect_npz(results_file, parameter='FAR', farcut=False, ptercut=False, b
         dat = neutrino_count
 
     return dat
+
+def downselect_npz_cwb(results_file, parameter='FAR', farcut=False):
+    data = np.load(results_file, allow_pickle=True)
+    superevent_id = data['Superevent'] 
+    snr = data['SNR']
+    far = data['FAR'] 
+    amp = data['Amplitude'] 
+    freq = data['Central_Freq'] 
+    band = data['Bandwidth'] 
+    dur = data['Duration'] 
+
+    if farcut == True:
+        #cut on FAR at 1/day
+        farcut=(1.1574 * 10 ** (-5))
+        idx_farcut = np.where([i < farcut for i in far])
+        far = far[idx_farcut]
+        snr = snr[idx_farcut]
+        amp = amp[idx_farcut]
+        freq = freq[idx_farcut]
+        band = band[idx_farcut]
+        dur = dur[idx_farcut]
+    
+    if parameter == 'FAR':
+        dat = far
+    elif parameter == 'SNR':
+        dat = snr
+    elif parameter == 'Amplitude':
+        dat = amp
+    elif parameter == 'Central Frequency':
+        dat = freq
+    elif parameter == 'Bandwidth':
+        dat = band
+    elif parameter == 'Duration':
+        dat = dur
+    return dat
+
 
 def downselect_npz_pipeline(results_file, parameter='FAR', farcut=False, oddscut=False):
     data = np.load(results_file, allow_pickle=True)

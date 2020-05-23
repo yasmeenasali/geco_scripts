@@ -50,6 +50,18 @@ def best_scale(parameter):
         bins_dat = np.linspace(0, 22, 50) 
         x_scale = 'linear'
         y_scale = 'log'
+    elif parameter == 'Amplitude':
+        bins_dat = 30
+        x_scale, y_scale = 'linear', 'linear'
+    elif parameter == 'Central Frequency':
+        bins_dat = 30
+        x_scale, y_scale = 'linear', 'linear'
+    elif parameter == 'Bandwidth':
+        bins_dat = 30
+        x_scale, y_scale = 'linear', 'linear'
+    elif parameter == 'Duration':
+        bins_dat = 30
+        x_scale, y_scale = 'linear', 'linear'
     else:
         print("Invalid Parameter")
         exit()
@@ -91,6 +103,43 @@ def plot_O3A_v_O3B(O3A_file, O3B_file, parameter = 'SNR'):
     plt.savefig(f'/home/yasmeen.asali/public_html/GWHEN/O3_subthreshold/O3A_vs_O3B_{parameter}_with_far_cut.pdf')
     plt.close(2)
 
+def plot_O3A_v_O3B_cwb(O3A_file, O3B_file, parameter = 'SNR'):
+    dat_O3A = get_data.downselect_npz_cwb(O3A_file, parameter = parameter)
+    dat_O3B = get_data.downselect_npz_cwb(O3B_file, parameter = parameter)
+
+    bins_dat, x_scale, y_scale = best_scale(parameter) 
+
+    dens = False
+    plt.figure(1)
+    plt.hist(dat_O3A, bins=bins_dat, color='b', alpha=0.5, density=dens, label="O3A Events\n({})".format(len(dat_O3A)))
+    plt.hist(dat_O3B, bins=bins_dat, color='r', alpha=0.5, density=dens, label="O3B Events\n({})".format(len(dat_O3B)))
+    plt.xlabel(parameter)
+    plt.ylabel('Number of Events')
+    plt.xscale(x_scale)
+    plt.yscale(y_scale)
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f'/home/yasmeen.asali/public_html/GWHEN/CWB/O3A_vs_O3B_{parameter}.pdf')
+    plt.close(1)
+
+    dat_far_O3A = get_data.downselect_npz_cwb(O3A_file, parameter = parameter, farcut=True)
+    dat_far_O3B = get_data.downselect_npz_cwb(O3B_file, parameter = parameter, farcut=True)
+
+    plt.figure(2)
+    plt.hist(dat_far_O3A, bins=bins_dat, color='b', alpha=0.5, density=dens, label="O3A with FAR $<$ 1/day\n({})".format(len(dat_far_O3A)))
+    plt.hist(dat_far_O3B, bins=bins_dat, color='r', alpha=0.5, density=dens, label="O3B with FAR $<$ 1/day\n({})".format(len(dat_far_O3B)))
+    plt.xlabel(parameter)
+    plt.ylabel('Number of Events')
+    plt.xscale(x_scale)
+    plt.yscale(y_scale)
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f'/home/yasmeen.asali/public_html/GWHEN/CWB/O3A_vs_O3B_{parameter}_with_far_cut.pdf')
+    plt.close(2)
+
+
 def plot_parameters(numpy_file, parameter = 'SNR', background=False):
     if background == True:
         dat = get_data.downselect_npz(numpy_file, parameter = parameter, background=True)
@@ -115,8 +164,9 @@ def plot_parameters(numpy_file, parameter = 'SNR', background=False):
         plt.title('O3A Subthreshold Background Results')
         plt.savefig(f'/home/yasmeen.asali/public_html/GWHEN/O3A_bkg_{RUN_BKG}/with_titles/{parameter}_with_far_cut_full_results.pdf')
     else:
-        plt.title('O3 Subthreshold Results')
-        plt.savefig(f'/home/yasmeen.asali/public_html/GWHEN/O3_subthreshold/{parameter}_with_far_cut.pdf')
+        plt.tight_layout()
+        #plt.title('O3 Subthreshold Results')
+        plt.savefig(f'/home/yasmeen.asali/public_html/GWHEN/O3_subthreshold/{parameter}_with_far_cut_tight_layout.pdf')
     plt.close(1)
 
  
@@ -234,21 +284,29 @@ if __name__ == "__main__":
 
     PATH ='/home/yasmeen.asali/GWHEN/analysis'
     numpy_file = f'{PATH}/O3_full_run_data.npz' 
+    O3A_cwb = f'{PATH}/O3A_cwb_full_data.npz' 
+    O3B_cwb = f'{PATH}/O3B_cwb_full_data.npz' 
     
     PATH_O3A = '/home/yasmeen.asali/GWHEN/O3A_subthreshold/data'
     O3A_file = f'{PATH_O3A}/O3A_cbc_data.npy'
     PATH_O3B = '/home/yasmeen.asali/GWHEN/O3B_subthreshold/data'
     O3B_file = f'{PATH_O3B}/O3B_cbc_full_data.npz'    
 
+    plot_O3A_v_O3B_cwb(O3A_cwb, O3B_cwb, parameter = 'SNR')
+    plot_O3A_v_O3B_cwb(O3A_cwb, O3B_cwb, parameter = 'Amplitude')
+    plot_O3A_v_O3B_cwb(O3A_cwb, O3B_cwb, parameter = 'Central Frequency')
+    plot_O3A_v_O3B_cwb(O3A_cwb, O3B_cwb, parameter = 'Duration')
+    plot_O3A_v_O3B_cwb(O3A_cwb, O3B_cwb, parameter = 'Bandwidth')
+
     #plot_O3A_v_O3B(O3A_file, O3B_file, parameter = 'SNR')
     #plot_O3A_v_O3B(O3A_file, O3B_file, parameter = 'Sky Area')
     #plot_O3A_v_O3B(O3A_file, O3B_file, parameter = 'p Terrestrial')
     #plot_O3A_v_O3B(O3A_file, O3B_file, parameter = 'Distance')
 
-    plot_parameters(numpy_file, parameter = 'SNR')
-    plot_parameters(numpy_file, parameter = 'Sky Area')
-    plot_parameters(numpy_file, parameter = 'p Terrestrial')
-    plot_parameters(numpy_file, parameter = 'Distance')
+    #plot_parameters(numpy_file, parameter = 'SNR')
+    #plot_parameters(numpy_file, parameter = 'Sky Area')
+    #plot_parameters(numpy_file, parameter = 'p Terrestrial')
+    #plot_parameters(numpy_file, parameter = 'Distance')
 
     #plot_parameters(numpy_file, parameter = 'Odds Ratio', background = True)
     #plot_parameters(numpy_file, parameter = 'Neutrino Count', background = True)

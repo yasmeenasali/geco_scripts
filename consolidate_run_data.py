@@ -14,7 +14,9 @@ This file can be run as a script.
 
 import argparse 
 parser = argparse.ArgumentParser(description=DESC, formatter_class=argparse.RawDescriptionHelpFormatter)
-parser.add_argument('-f', '--file', default=False, help=("Generate File"))
+parser.add_argument('-r', '--run', type=str, help=("Specify which run to generate file for (ex. O3A, O3B)"))
+parser.add_argument('--cbc', default=False, help=("Generate CBC File"))
+parser.add_argument('--cwb', default=False, help=("Generate CWB File"))
 args = parser.parse_args()
 
 import numpy as np
@@ -67,7 +69,7 @@ def get_distmean(PATH):
     dist = data[1].header['DISTMEAN']
     return float(dist)
 
-def generate_data_file(PATH, superevents_cbc, get_skyarea=False):
+def generate_data_file(PATH, RUN, superevents_cbc, get_skyarea=False):
     superevent_data = []
     snr_data = []
     far_data = []
@@ -104,12 +106,54 @@ def generate_data_file(PATH, superevents_cbc, get_skyarea=False):
     else:
         kwargs = {'Superevent': superevent_data, 'SNR': snr_data, 'FAR': far_data, 
                   'Pipeline': pipeline_data, 'p_Terrestrial': pter_data, 'Distance': dist_data}
-    np.savez('O3B_cbc_full_data', **kwargs)
-    
+    np.savez(f'{RUN}_cbc_full_data', **kwargs)
+
+def generate_cwb_data_file(PATH, RUN, superevents_cwb):
+    superevent_data = []
+    snr_data = []
+    far_data = []
+    amplitude_data = []
+    bandwidth_data = []
+    central_freq_data = []
+    duration_data = []
+    for superevent in superevents_cwb:
+        try:
+            with open("{}/superevents/{}/preferred_event_data.json".format(PATH, superevent), "r") as read_file:
+                data = json.load(read_file)
+                amplitude = data['extra_attributes']['MultiBurst']['amplitude']
+                bandwidth = data['extra_attributes']['MultiBurst']['bandwidth']
+                central_freq = data['extra_attributes']['MultiBurst']['central_freq']
+                duration = data['extra_attributes']['MultiBurst']['duration']
+                snr = data['extra_attributes']['MultiBurst']['snr']
+                far = data['far']
+                superevent_data.append(superevent)
+                snr_data.append(snr)        
+                far_data.append(far)        
+                amplitude_data.append(amplitude)        
+                bandwidth_data.append(bandwidth)        
+                central_freq_data.append(central_freq)        
+                duration_data.append(duration)        
+        except FileNotFoundError as err:
+            continue
+    kwargs = {'Superevent': superevent_data, 'SNR': snr_data, 'FAR': far_data, 
+              'Amplitude': amplitude_data, 'Bandwidth': bandwidth_data, 
+              'Central_Freq': central_freq_data, 'Duration': duration_data}
+    np.savez('{}_cwb_full_data'.format(RUN), **kwargs)
+
 if __name__ == "__main__": 
-    if args.file:
-        print('Generating O3B Subthreshold CBC Events File')
-        PATH = '/home/yasmeen.asali/GWHEN/O3B_subthreshold'
-        superevents_cbc = np.load(f'{PATH}/data/O3B_cbc_superevent_ids.npy')
-        generate_data_file(PATH, superevents_cbc, get_skyarea=True)
+    RUN = args.run
+    if args.cbc:
+        print(f'Generating {RUN} Subthreshold CBC Events File')
+        PATH = f'/home/yasmeen.asali/GWHEN/{RUN}_subthreshold'
+        superevents_cbc = np.load(f'{PATH}/data/{RUN}_cbc_superevent_ids.npy')
+        generate_data_file(PATH, RUN, superevents_cbc, get_skyarea=True)
+        print("Finished generating file") 
+    if args.cwb:
+        print(f'Generating {RUN} Subthreshold CWB Events File')
+        PATH = f'/home/yasmeen.asali/GWHEN/{RUN}_subthreshold'
+        if RUN == 'O3A':
+            superevents_cwb = np.load(f'{PATH}/data/superevent_ID_lists/missing_event_ids_cwb.npy')
+        if RUN == 'O3B':
+            superevents_cwb = np.load(f'{PATH}/data/O3B_cwb_superevent_ids.npy')
+        generate_cwb_data_file(PATH, RUN, superevents_cwb)
         print("Finished generating file") 

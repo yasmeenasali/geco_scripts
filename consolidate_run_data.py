@@ -77,6 +77,7 @@ def generate_data_file(PATH, RUN, superevents_cbc, get_skyarea=False):
     pter_data = []
     dist_data = []
     skyarea_data = []
+    time_data = []
     for superevent in superevents_cbc:
         with open("{}/superevents/{}/preferred_event_data.json".format(PATH, superevent), "r") as read_file:
             data = json.load(read_file)
@@ -85,6 +86,7 @@ def generate_data_file(PATH, RUN, superevents_cbc, get_skyarea=False):
         with open("{}/superevents/{}/superevent_data.json".format(PATH, superevent), "r") as read_file_S:
             dataS = json.load(read_file_S)
             far = dataS['far']
+            time = dataS['t_0']
         with open("{}/superevents/{}/p_astro.json".format(PATH, superevent), "r") as read_file:
             dataP = json.load(read_file)
             pter = dataP['Terrestrial']
@@ -96,15 +98,16 @@ def generate_data_file(PATH, RUN, superevents_cbc, get_skyarea=False):
         pipeline_data.append(pipeline)
         pter_data.append(float(pter))
         dist_data.append(dist)
+        time_data.append(float(time))
         if get_skyarea == True:
             skyarea = get_90_skyarea(skymap)
             skyarea_data.append(skyarea)
         print('Finished {}'.format(superevent))
     if get_skyarea == True:
-        kwargs = {'Superevent': superevent_data, 'SNR': snr_data, 'FAR': far_data, 
+        kwargs = {'Superevent': superevent_data, 'Time': time_data, 'SNR': snr_data, 'FAR': far_data, 
                   'Pipeline': pipeline_data, 'p_Terrestrial': pter_data, 'Distance': dist_data, 'Skyarea': skyarea_data}
     else:
-        kwargs = {'Superevent': superevent_data, 'SNR': snr_data, 'FAR': far_data, 
+        kwargs = {'Superevent': superevent_data, 'Time': time_data, 'SNR': snr_data, 'FAR': far_data, 
                   'Pipeline': pipeline_data, 'p_Terrestrial': pter_data, 'Distance': dist_data}
     np.savez(f'{RUN}_cbc_full_data', **kwargs)
 
@@ -116,6 +119,7 @@ def generate_cwb_data_file(PATH, RUN, superevents_cwb):
     bandwidth_data = []
     central_freq_data = []
     duration_data = []
+    time_data = []
     for superevent in superevents_cwb:
         try:
             with open("{}/superevents/{}/preferred_event_data.json".format(PATH, superevent), "r") as read_file:
@@ -133,9 +137,14 @@ def generate_cwb_data_file(PATH, RUN, superevents_cwb):
                 bandwidth_data.append(bandwidth)        
                 central_freq_data.append(central_freq)        
                 duration_data.append(duration)        
+            with open("{}/superevents/{}/superevent_data.json".format(PATH, superevent), "r") as read_file:
+                data = json.load(read_file)
+                time = data['t_0']
+                time_data.append(time)
         except FileNotFoundError as err:
             continue
-    kwargs = {'Superevent': superevent_data, 'SNR': snr_data, 'FAR': far_data, 
+    kwargs = {'Superevent': superevent_data, 'Time': time_data,
+              'SNR': snr_data, 'FAR': far_data, 
               'Amplitude': amplitude_data, 'Bandwidth': bandwidth_data, 
               'Central_Freq': central_freq_data, 'Duration': duration_data}
     np.savez('{}_cwb_full_data'.format(RUN), **kwargs)
@@ -145,8 +154,11 @@ if __name__ == "__main__":
     if args.cbc:
         print(f'Generating {RUN} Subthreshold CBC Events File')
         PATH = f'/home/yasmeen.asali/GWHEN/{RUN}_subthreshold'
-        superevents_cbc = np.load(f'{PATH}/data/{RUN}_cbc_superevent_ids.npy')
-        generate_data_file(PATH, RUN, superevents_cbc, get_skyarea=True)
+        if RUN == 'O3A':
+            superevents_cbc = np.load(f'{PATH}/data/superevent_ID_lists/superevent_ids_cbc_events.npy')
+        if RUN == 'O3B':
+            superevents_cbc = np.load(f'{PATH}/data/O3B_cbc_superevent_ids.npy')
+        generate_data_file(PATH, RUN, superevents_cbc, get_skyarea=False)
         print("Finished generating file") 
     if args.cwb:
         print(f'Generating {RUN} Subthreshold CWB Events File')
